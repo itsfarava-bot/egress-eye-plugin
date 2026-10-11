@@ -1,0 +1,186 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Egress Eye 1.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-04 18:34+0200\n"
+"Language: fa_IR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: src/Admin/AdminMenu.php:52 src/Admin/AdminPage.php:73
+msgid "Egress Eye"
+msgstr "Egress Eye"
+
+#: src/Admin/AdminPage.php:76
+msgid "Host blocked."
+msgstr "میزبان قطع شد."
+
+#: src/Admin/AdminPage.php:77
+msgid "Host unblocked."
+msgstr "میزبان وصل شد."
+
+#: src/Admin/AdminPage.php:78
+msgid "Confirm the loopback warning before blocking this host."
+msgstr "پیش از قطع این میزبان، هشدار میزبان محلی را تأیید کنید."
+
+#: src/Admin/AdminPage.php:79
+msgid "The action was not saved; the host status is unchanged."
+msgstr "اقدام ذخیره نشد؛ وضعیت میزبان تغییری نکرده است."
+
+#: src/Admin/AdminPage.php:84
+msgid "Counts and averages include only slow requests (at least 1 second)."
+msgstr "تعداد و میانگین فقط برای درخواست‌های کند (حداقل ۱ ثانیه) هستند."
+
+#: src/Admin/AdminPage.php:84
+msgid ""
+"Only the exact host is blocked; subdomains and DNS-to-IP mappings are not "
+"inherited. Redirect destinations are not guaranteed."
+msgstr ""
+"قطع فقط میزبان دقیق را شامل می‌شود؛ زیردامنه‌ها و نگاشت DNS به IP شامل "
+"نمی‌شوند. قطع مقصد ریدایرکت تضمین نمی‌شود."
+
+#: src/Admin/AdminPage.php:84
+msgid ""
+"The probable source is a guess. Wrappers, cron and shared code can make "
+"attribution uncertain."
+msgstr ""
+"مسئول احتمالی فقط یک حدس است. واسط‌ها، کرون و کد مشترک می‌توانند نسبت‌دهی را "
+"نامطمئن کنند."
+
+#: src/Admin/AdminPage.php:85
+msgid ""
+"MyISAM tables can record and display diagnostics. Blocking and unblocking "
+"require InnoDB to save the change and its history together. Your hosting "
+"provider can help with the table format."
+msgstr ""
+"با جدول‌های MyISAM ثبت و نمایش اطلاعات ادامه دارد. برای قطع و وصل، جدول‌ها "
+"باید از نوع InnoDB باشند تا تغییر و تاریخچهٔ آن با هم ذخیره شوند. پشتیبانی "
+"هاست می‌تواند برای فرمت جدول‌ها کمک کند."
+
+#: src/Admin/AdminPage.php:89
+msgid ""
+"The 500-host capacity is full. Existing hosts remain tracked. New hosts "
+"cannot be tracked until retention removes an old unblocked host. Unblocking "
+"does not immediately free a slot."
+msgstr ""
+"ظرفیت ۵۰۰ میزبان پر است. میزبان‌های موجود همچنان بررسی می‌شوند. تا زمانی که "
+"فرایند نگهداری یک میزبان قدیمی و وصل را حذف نکند، میزبان تازه‌ای بررسی "
+"نمی‌شود. وصل کردن میزبان بلافاصله جا باز نمی‌کند."
+
+#: src/Admin/AdminPage.php:96
+msgid "Diagnostic storage is unavailable. No block state was changed."
+msgstr "ذخیره‌سازی تشخیصی در دسترس نیست. وضعیت قطع تغییر نکرد."
+
+#: src/Admin/AuditTableRenderer.php:27
+msgid "Recent manual actions (UTC)"
+msgstr "اقدام‌های دستی اخیر (UTC)"
+
+#: src/Admin/AuditTableRenderer.php:28
+msgid "Time (UTC)"
+msgstr "زمان (UTC)"
+
+#: src/Admin/AuditTableRenderer.php:28 src/Admin/DomainTableRenderer.php:47
+msgid "Host"
+msgstr "میزبان"
+
+#: src/Admin/AuditTableRenderer.php:28
+msgid "Action"
+msgstr "اقدام"
+
+#: src/Admin/AuditTableRenderer.php:28
+msgid "User ID"
+msgstr "شناسهٔ کاربر"
+
+#: src/Admin/AuditTableRenderer.php:33 src/Admin/DomainTableRenderer.php:73
+msgid "Block"
+msgstr "قطع کن"
+
+#: src/Admin/AuditTableRenderer.php:33 src/Admin/DomainTableRenderer.php:73
+msgid "Unblock"
+msgstr "وصل کن"
+
+#: src/Admin/AuditTableRenderer.php:37
+msgid "No manual actions yet."
+msgstr "هنوز اقدام دستی انجام نشده است."
+
+#: src/Admin/DomainTableRenderer.php:46
+msgid "Slow requests by exact host"
+msgstr "درخواست‌های کند به تفکیک میزبان دقیق"
+
+#: src/Admin/DomainTableRenderer.php:47
+msgid "Slow count"
+msgstr "تعداد کندها"
+
+#: src/Admin/DomainTableRenderer.php:47
+msgid "Last duration (seconds)"
+msgstr "آخرین مدت (ثانیه)"
+
+#: src/Admin/DomainTableRenderer.php:47
+msgid "Mean duration (seconds)"
+msgstr "میانگین مدت (ثانیه)"
+
+#: src/Admin/DomainTableRenderer.php:47
+msgid "Probable source (Guess)"
+msgstr "مسئول احتمالی (حدس)"
+
+#: src/Admin/DomainTableRenderer.php:47
+msgid "Status and action"
+msgstr "وضعیت و اقدام"
+
+#: src/Admin/DomainTableRenderer.php:60
+msgid "Unknown"
+msgstr "نامشخص"
+
+#: src/Admin/DomainTableRenderer.php:62
+msgid "Guess"
+msgstr "حدس"
+
+#: src/Admin/DomainTableRenderer.php:63
+msgid "Blocked"
+msgstr "مسدود"
+
+#: src/Admin/DomainTableRenderer.php:63
+msgid "Unblocked"
+msgstr "وصل"
+
+#: src/Admin/DomainTableRenderer.php:66
+msgid ""
+"Blocking this site or loopback host can interrupt cron and other essential "
+"tasks."
+msgstr ""
+"قطع میزبان این سایت یا میزبان محلی می‌تواند اجرای کرون و کارهای ضروری دیگر را "
+"مختل کند."
+
+#: src/Admin/DomainTableRenderer.php:71
+msgid "I understand the risk and confirm blocking this site or loopback host."
+msgstr "خطر را می‌دانم و قطع میزبان این سایت یا میزبان محلی را تأیید می‌کنم."
+
+#: src/Admin/DomainTableRenderer.php:76
+msgid "No slow requests have been recorded yet."
+msgstr "هنوز درخواست کندی ثبت نشده است."
+
+#: src/Admin/ToggleDomainAction.php:59
+msgid "A valid POST request is required."
+msgstr "یک درخواست POST معتبر لازم است."
+
+#: src/Admin/ToggleDomainAction.php:66
+msgid "The requested action is invalid."
+msgstr "اقدام درخواستی نامعتبر است."
+
+#: src/Http/BlockedHostGuard.php:90
+msgid "This host is blocked by Egress Eye."
+msgstr "این میزبان توسط Egress Eye مسدود شده است."
+
+#: src/Persistence/SchemaManager.php:159
+msgid "Egress Eye supports single-site activation only."
+msgstr "Egress Eye فقط فعال‌سازی روی سایت مستقل را پشتیبانی می‌کند."
+
+#: src/Persistence/SchemaManager.php:163
+msgid "Egress Eye could not initialize its diagnostic storage."
+msgstr "Egress Eye نتوانست ذخیره‌سازی تشخیصی را آماده کند."
+
+#: src/Support/Capabilities.php:32
+msgid "You are not allowed to manage Egress Eye."
+msgstr "شما اجازهٔ مدیریت Egress Eye را ندارید."

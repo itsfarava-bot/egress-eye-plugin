@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<ruleset name="Egress Eye">
+    <description>Egress Eye coding and PHP 7.4 compatibility rules.</description>
+
+    <file>egress-eye.php</file>
+    <file>uninstall.php</file>
+    <file>src</file>
+    <file>tests</file>
+
+    <exclude-pattern>/vendor/*</exclude-pattern>
+    <exclude-pattern>/.phpunit.cache/*</exclude-pattern>
+
+    <arg name="basepath" value="."/>
+    <arg name="colors"/>
+    <arg value="sp"/>
+
+    <!-- WordPress Files.FileName assumes WordPress's file naming convention.
+         src/ follows PSR-4 class-to-file names deliberately, so this single
+         sniff is excluded there while the remaining file checks stay active. -->
+    <rule ref="WordPress.Files.FileName">
+        <exclude-pattern>*/src/*</exclude-pattern>
+        <!-- PHPUnit test classes intentionally keep conventional *Test.php names. -->
+        <exclude-pattern>*/tests/*</exclude-pattern>
+    </rule>
+
+    <!--
+         Namespaced PHP contracts use the already-approved camelCase method
+         names from the architecture (for example nowNanoseconds()). This
+         exemption is scoped to internal Contracts/Http classes; global
+         WordPress functions and variables remain under the normal rules.
+    -->
+    <rule ref="WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid">
+        <exclude-pattern>*/src/Contracts/*</exclude-pattern>
+        <exclude-pattern>*/src/Http/*</exclude-pattern>
+        <!-- This concrete class implements the approved getBlockedHosts() contract. -->
+        <exclude-pattern>*/src/Persistence/DomainRepository.php</exclude-pattern>
+    </rule>
+
+    <config name="minimum_wp_version" value="6.6"/>
+    <config name="testVersion" value="7.4-"/>
+
+    <rule ref="WordPress"/>
+    <rule ref="WordPress-Extra"/>
+    <rule ref="WordPress-Docs"/>
+    <rule ref="PHPCompatibilityWP"/>
+
+    <rule ref="WordPress.WP.I18n">
+        <properties>
+            <property name="text_domain" type="array">
+                <element value="egress-eye"/>
+            </property>
+        </properties>
+    </rule>
+
+    <rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+        <properties>
+            <property name="prefixes" type="array">
+                <element value="egress_eye_"/>
+                <element value="EGRESS_EYE_"/>
+                <!-- The namespace is a PHP identifier, not a global API prefix. -->
+                <element value="EgressEye"/>
+            </property>
+        </properties>
+        <!-- PHPUnit fixtures use WordPress globals such as ABSPATH deliberately. -->
+        <exclude-pattern>*/tests/*</exclude-pattern>
+    </rule>
+</ruleset>

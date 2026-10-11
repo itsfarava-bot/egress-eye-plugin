@@ -1,0 +1,36 @@
+{
+  "name": "egress-eye/egress-eye",
+  "description": "Egress Eye: a lightweight WordPress HTTP API diagnostic plugin.",
+  "type": "wordpress-plugin",
+  "license": "GPL-2.0-or-later",
+  "require": {
+    "php": ">=7.4"
+  },
+  "autoload": {
+    "psr-4": {
+      "EgressEye\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "EgressEye\\Tests\\": "tests/"
+    }
+  },
+  "require-dev": {
+    "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+    "phpcompatibility/phpcompatibility-wp": "^2.1",
+    "phpstan/phpstan": "^2.2",
+    "phpunit/phpunit": "^9.6",
+    "squizlabs/php_codesniffer": "^3.10",
+    "wp-coding-standards/wpcs": "^3.1"
+  },
+  "config": {
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": true
+    },
+    "platform": {
+      "php": "7.4.33"
+    },
+    "sort-packages": true
+  }
+}

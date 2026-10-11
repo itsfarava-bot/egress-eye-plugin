@@ -1,0 +1,11 @@
+parameters:
+    level: 6
+    # WordPress supplies an installation path that differs across hosts/runners.
+    dynamicConstantNames:
+        - ABSPATH
+    paths:
+        - src
+    scanFiles:
+        - tools/phpstan/wordpress-hooks.stub.php
+    stubFiles:
+        - tools/phpstan/wordpress-hooks.stub.php

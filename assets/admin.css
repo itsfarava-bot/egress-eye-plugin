@@ -1,0 +1,43 @@
+/* Native admin UI; local, page-scoped, readable and direction-aware. */
+.egress-eye .egress-eye-header {
+	background: #00af23;
+	color: #1d2327;
+	padding: 16px;
+	border-radius: 3px;
+}
+.egress-eye table { margin-block: 20px; }
+.egress-eye caption {
+	text-align: start;
+	font-weight: 600;
+	font-size: 16px;
+	padding-block: 12px;
+}
+.egress-eye th, .egress-eye td { text-align: start; vertical-align: top; }
+.egress-eye .egress-eye-warning, .egress-eye .egress-eye-slow {
+	color: #713f12;
+	background: #fef3c7;
+	padding: 6px;
+}
+.egress-eye .egress-eye-blocked {
+	color: #991b1b;
+	background: #fee2e2;
+	padding: 6px;
+}
+.egress-eye .egress-eye-primary {
+	color: #1d2327;
+	background: #00af23;
+	border-color: #1d2327;
+	text-shadow: none;
+	box-shadow: none;
+}
+.egress-eye .egress-eye-primary:hover, .egress-eye .egress-eye-primary:focus {
+	color: #1d2327;
+	background: #00af23;
+	border-color: #1d2327;
+}
+.egress-eye button:focus-visible, .egress-eye input:focus-visible {
+	outline: 3px solid #1d2327;
+	outline-offset: 3px;
+}
+.egress-eye[dir="rtl"] table { direction: rtl; }
+.egress-eye form { margin-block-start: 10px; }
