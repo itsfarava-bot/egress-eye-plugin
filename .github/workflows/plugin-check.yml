@@ -1,0 +1,99 @@
+name: Plugin Check
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["docs/**", "README.md"]
+  pull_request:
+    branches: [main]
+    paths-ignore: ["docs/**", "README.md"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: plugin-check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plugin-check:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: wordpress_test
+          MARIADB_USER: wordpress
+          MARIADB_PASSWORD: wordpress
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mariadb-admin ping -h localhost -uroot -proot"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - name: Check out exact branch snapshot
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up checker runtime
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: '8.3'
+          extensions: mysqli, mbstring, zip
+          tools: wp-cli
+          coverage: none
+      - name: Build and install the sole production ZIP
+        env:
+          PCP_SITE: ${{ runner.temp }}/pcp-site
+        run: |
+          bash build/package-plugin.sh
+          wp core download --version=7.1.3 --path="$PCP_SITE"
+          wp config create --path="$PCP_SITE" --dbname=wordpress_test --dbuser=wordpress --dbpass=wordpress --dbhost=127.0.0.1
+          wp core install --path="$PCP_SITE" --url=http://localhost --title=Checker --admin_user=checker --admin_password=ci-fixture-password --admin_email=checker@example.test --skip-email
+          wp plugin install "$GITHUB_WORKSPACE/dist/egress-eye.zip" --path="$PCP_SITE" --activate
+          wp plugin install plugin-check --version=2.1.0 --path="$PCP_SITE" --activate
+          wp --info > dist/plugin-check-environment.txt
+          wp core version --path="$PCP_SITE" >> dist/plugin-check-environment.txt
+          wp plugin get plugin-check --path="$PCP_SITE" --field=version >> dist/plugin-check-environment.txt
+          diff -qr src "$PCP_SITE/wp-content/plugins/egress-eye/src"
+      - name: Official Plugin Check including runtime checks
+        env:
+          PCP_SITE: ${{ runner.temp }}/pcp-site
+        run: |
+          set -o pipefail
+          wp plugin check egress-eye --path="$PCP_SITE" --require="$PCP_SITE/wp-content/plugins/plugin-check/cli.php" --format=json | tee dist/plugin-check-results.txt
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          text = Path('dist/plugin-check-results.txt').read_text()
+          findings = []
+          filename = None
+          for line in text.splitlines():
+              if line.startswith('FILE: '):
+                  filename = line[6:]
+              elif line.startswith('['):
+                  rows = json.loads(line)
+                  if filename is None or not isinstance(rows, list):
+                      raise SystemExit('Unrecognized Plugin Check report')
+                  for row in rows:
+                      row['file'] = filename
+                      if row.get('type') not in ('ERROR', 'WARNING', 'INFO'):
+                          raise SystemExit('Unrecognized Plugin Check finding')
+                      findings.append(row)
+          if not findings and 'No errors found' not in text:
+              raise SystemExit('No recognized Plugin Check result')
+          Path('dist/plugin-check-results.json').write_text(json.dumps(findings, indent=2))
+          errors = [row for row in findings if row['type'] == 'ERROR']
+          print('Official Plugin Check errors:', len(errors))
+          print('Official Plugin Check warnings:', sum(row['type'] == 'WARNING' for row in findings))
+          if errors:
+              raise SystemExit(1)
+          PY
+      - name: Preserve exact ZIP, manifest and full checker evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: egress-eye-plugin-check-${{ github.event.pull_request.head.sha || github.sha }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14

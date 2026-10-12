@@ -1,0 +1,40 @@
+name: Package
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["docs/**", "README.md"]
+  pull_request:
+    branches: [main]
+    paths-ignore: ["docs/**", "README.md"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: package-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Exercise packaging leak controls
+        run: python3 tests/Packaging/package_contract.py
+      - name: Build sole production package
+        run: bash build/package-plugin.sh
+      - name: Verify production allowlist and compiled translation
+        run: |
+          ! unzip -Z1 dist/egress-eye.zip | grep -E '/(vendor|tests|docs|build|\.github)/'
+          unzip -Z1 dist/egress-eye.zip | grep -Fx 'egress-eye/languages/egress-eye-fa_IR.mo'
+      - name: Save initial production ZIP and manifest
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: egress-eye-production-${{ github.event.pull_request.head.sha || github.sha }}
+          path: dist/egress-eye*
+          if-no-files-found: error
+          retention-days: 14

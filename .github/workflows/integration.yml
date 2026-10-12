@@ -1,0 +1,265 @@
+name: Integration
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["docs/**", "README.md"]
+  pull_request:
+    branches: [main]
+    paths-ignore: ["docs/**", "README.md"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: integration-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  wordpress:
+    name: ${{ matrix.database }} / WordPress ${{ matrix.wordpress }} / PHP ${{ matrix.php }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - wordpress: "6.6.9"
+            expected_version: "6.6.9"
+            php: "7.4"
+            database: "mariadb:10.11"
+          - wordpress: "7.1.3"
+            expected_version: "7.1.3"
+            php: "8.3"
+            database: "mariadb:10.11"
+          - wordpress: "7.1.3"
+            expected_version: "7.1.3"
+            php: "8.3"
+            database: "mysql:8.0"
+
+    services:
+      mariadb:
+        image: ${{ matrix.database }}
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: wordpress_test
+          MARIADB_USER: wordpress
+          MARIADB_PASSWORD: wordpress
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress_test
+          MYSQL_USER: wordpress
+          MYSQL_PASSWORD: wordpress
+          MYSQL_ROOT_HOST: '%'
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="sh -c 'if command -v mariadb-admin >/dev/null 2>&1; then mariadb-admin ping -h localhost -uroot -proot; else mysqladmin ping -h localhost -uroot -proot; fi'"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      WP_CORE_DIR: ${{ github.workspace }}/.wordpress
+      WP_TESTS_DIR: ${{ github.workspace }}/.wordpress-tests
+      WP_TESTS_PHPUNIT_POLYFILLS_PATH: ${{ github.workspace }}/vendor/yoast/phpunit-polyfills
+      EGRESS_EYE_INTEGRATION: "1"
+      EGRESS_EYE_EXPECTED_WP_VERSION: ${{ matrix.expected_version }}
+
+    steps:
+      - name: Check out Egress Eye
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, mysqli
+          coverage: none
+          tools: composer:2.10.3
+
+      - name: Show tool versions
+        run: |
+          php --version
+          composer --version
+
+      - name: Install Egress Eye dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Add WordPress test polyfills to Egress Eye vendor
+        run: |
+          composer require --dev yoast/phpunit-polyfills:^1.1.5 --no-interaction --no-progress --no-update
+          composer update yoast/phpunit-polyfills --with-dependencies --no-interaction --prefer-dist --no-progress --no-scripts
+          test -f vendor/yoast/phpunit-polyfills/phpunitpolyfills-autoload.php
+          composer show yoast/phpunit-polyfills
+
+      - name: Install WordPress core and partial test suite
+        env:
+          WP_VERSION: ${{ matrix.wordpress }}
+        run: |
+          set -euo pipefail
+
+          install_root="${RUNNER_TEMP}/egress-eye-wordpress-${WP_VERSION}"
+          rm -rf "${install_root}" "${WP_CORE_DIR}" "${WP_TESTS_DIR}"
+          mkdir -p "${install_root}" "${WP_CORE_DIR}" "${WP_TESTS_DIR}"
+
+          curl --fail --silent --show-error --location --retry 3 --retry-delay 2 \
+            "https://wordpress.org/wordpress-${WP_VERSION}.tar.gz" \
+            --output "${install_root}/wordpress.tar.gz"
+          tar -xzf "${install_root}/wordpress.tar.gz" --strip-components=1 -C "${WP_CORE_DIR}"
+
+          curl --fail --silent --show-error --location --retry 3 --retry-delay 2 \
+            "https://github.com/WordPress/wordpress-develop/archive/refs/tags/${WP_VERSION}.tar.gz" \
+            --output "${install_root}/wordpress-develop.tar.gz"
+          test_suite_root="$(tar -tzf "${install_root}/wordpress-develop.tar.gz" | sed -n '1p' | cut -d/ -f1)"
+          test -n "${test_suite_root}"
+          tar -xzf "${install_root}/wordpress-develop.tar.gz" -C "${install_root}"
+
+          cp -a "${install_root}/${test_suite_root}/tests/phpunit/includes" "${WP_TESTS_DIR}/includes"
+          cp -a "${install_root}/${test_suite_root}/tests/phpunit/data" "${WP_TESTS_DIR}/data"
+          curl --fail --silent --show-error --location --retry 3 --retry-delay 2 \
+            "https://raw.githubusercontent.com/WordPress/wordpress-develop/${WP_VERSION}/wp-tests-config-sample.php" \
+            --output "${WP_TESTS_DIR}/wp-tests-config.php"
+
+          sed -i "s|dirname( __FILE__ ) . '/src/'|'${WP_CORE_DIR}/'|" "${WP_TESTS_DIR}/wp-tests-config.php"
+          mkdir -p "${WP_CORE_DIR}/wp-content/plugins"
+          ln -s "${GITHUB_WORKSPACE}" "${WP_CORE_DIR}/wp-content/plugins/egress-eye"
+
+          test -f "${WP_CORE_DIR}/wp-settings.php"
+          test -f "${WP_TESTS_DIR}/includes/bootstrap.php"
+          test -d "${WP_TESTS_DIR}/data"
+
+      - name: Configure WordPress test database
+        run: |
+          php -r '
+          $source = getenv("WP_TESTS_DIR") . "/wp-tests-config.php";
+          $config = file_get_contents($source);
+          if (false === $config) {
+              fwrite(STDERR, "Unable to read WordPress test configuration.\n");
+              exit(1);
+          }
+          $config = str_replace(
+              array("youremptytestdbnamehere", "yourusernamehere", "yourpasswordhere", "localhost"),
+              array("wordpress_test", "wordpress", "wordpress", "127.0.0.1"),
+              $config
+          );
+          if (false === file_put_contents($source, $config)) {
+              fwrite(STDERR, "Unable to write WordPress test configuration.\n");
+              exit(1);
+          }
+          '
+
+      - name: Verify MariaDB service
+        run: |
+          php -r '
+          $database = new mysqli("127.0.0.1", "wordpress", "wordpress", "wordpress_test", 3306);
+          if ($database->connect_errno) {
+              fwrite(STDERR, $database->connect_error . "\n");
+              exit(1);
+          }
+          echo "Database server: " . $database->server_info . PHP_EOL;
+          $database->close();
+          '
+
+      - name: Verify exact WordPress version and test files
+        run: |
+          php -r '
+          require "tests/bootstrap.php";
+          $actual = get_bloginfo("version");
+          $expected = getenv("EGRESS_EYE_EXPECTED_WP_VERSION");
+          echo "WordPress version: " . $actual . PHP_EOL;
+          if ($actual !== $expected) {
+              fwrite(STDERR, "Expected WordPress " . $expected . ", got " . $actual . "\n");
+              exit(1);
+          }
+          if (!defined("EGRESS_EYE_VERSION")) {
+              fwrite(STDERR, "Egress Eye was not loaded as an active plugin.\n");
+              exit(1);
+          }
+          '
+
+      # The external test dependency is used in exactly one environment.
+      # No plugin runtime download or production dependency is introduced.
+      - name: Install pinned Query Monitor test dependency
+        if: matrix.wordpress == '7.1.3' && matrix.php == '8.3' && matrix.database == 'mariadb:10.11'
+        run: |
+          curl --fail --silent --show-error --location --retry 3 \
+            https://downloads.wordpress.org/plugin/query-monitor.4.0.7.zip \
+            --output "${RUNNER_TEMP}/query-monitor.zip"
+          unzip -q "${RUNNER_TEMP}/query-monitor.zip" -d "${RUNNER_TEMP}/egress-eye-qm"
+          echo "EGRESS_EYE_QM_PATH=${RUNNER_TEMP}/egress-eye-qm/query-monitor/query-monitor.php" >> "$GITHUB_ENV"
+          test -f "${RUNNER_TEMP}/egress-eye-qm/query-monitor/vendor/autoload.php"
+
+      - name: Run PHPUnit unit suite with WordPress loaded
+        id: unit
+        run: vendor/bin/phpunit --testsuite "Egress Eye unit tests" --colors=never --no-coverage
+
+      - name: Run PHPUnit integration suite
+        if: ${{ success() || (failure() && steps.unit.outcome == 'failure') }}
+        shell: bash
+        run: |
+          set -o pipefail
+          vendor/bin/phpunit \
+            --testsuite integration \
+            --colors=never \
+            --no-coverage \
+            --log-junit "${RUNNER_TEMP}/egress-eye-integration.xml" | tee "${RUNNER_TEMP}/egress-eye-integration.txt"
+
+      - name: Assert integration suite was non-empty
+        run: |
+          php -r '
+          $report = getenv("RUNNER_TEMP") . "/egress-eye-integration.xml";
+          if (!is_file($report)) {
+              fwrite(STDERR, "The integration JUnit report was not created.\n");
+              exit(1);
+          }
+          $xml = simplexml_load_file($report);
+          if (false === $xml) {
+              fwrite(STDERR, "The integration JUnit report is invalid.\n");
+              exit(1);
+          }
+          $tests = 0;
+          if ("testsuite" === $xml->getName()) {
+              $tests = (int) $xml["tests"];
+          } else {
+              foreach ($xml->testsuite as $test_suite) {
+                  $tests += (int) $test_suite["tests"];
+              }
+          }
+          echo "Integration tests recorded: " . $tests . PHP_EOL;
+          if ($tests < 1) {
+              fwrite(STDERR, "No integration tests were recorded.\n");
+              exit(1);
+          }
+          '
+
+      - name: Prove actual Query Monitor collection ON and OFF
+        if: matrix.wordpress == '7.1.3' && matrix.php == '8.3' && matrix.database == 'mariadb:10.11'
+        run: vendor/bin/phpunit tests/Compatibility/QueryMonitorCompatibilityTest.php --colors=never --no-coverage
+
+      - name: Measure warmed local HTTP fast path
+        if: matrix.wordpress == '7.1.3' && matrix.php == '8.3' && matrix.database == 'mariadb:10.11'
+        env:
+          EGRESS_EYE_BENCHMARK_JSON: ${{ runner.temp }}/egress-eye-benchmark.json
+        run: |
+          vendor/bin/phpunit tests/Performance/FastPathBenchmarkTest.php --colors=never --no-coverage
+          php -r '$report = json_decode(file_get_contents(getenv("EGRESS_EYE_BENCHMARK_JSON")), true, 512, JSON_THROW_ON_ERROR); unset($report["raw_us"]); echo "BENCHMARK " . json_encode($report) . PHP_EOL;'
+
+      - name: Upload measured benchmark JSON
+        if: always() && matrix.wordpress == '7.1.3' && matrix.php == '8.3' && matrix.database == 'mariadb:10.11'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: egress-eye-benchmark
+          path: ${{ runner.temp }}/egress-eye-benchmark.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Validate plugin Composer metadata
+        run: composer validate --strict
+
+      - name: Run PHPCS
+        run: vendor/bin/phpcs
+
+      - name: Run PHPStan
+        run: vendor/bin/phpstan analyse --no-progress
